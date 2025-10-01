@@ -7,9 +7,6 @@ export class InventorySheetDetail {
     id: number;
 
     @Column()
-    inventorySheetId: number;
-
-    @Column()
     productId: string;
 
     @Column('decimal', { precision: 10, scale: 2 })

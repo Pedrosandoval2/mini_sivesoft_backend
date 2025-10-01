@@ -42,10 +42,10 @@ export class WarehousesService {
         }
     }
 
-    async update(id: string, updateWarehouseDto: UpdateWarehouseDto): Promise<Warehouse | null> {
+    async update(id: number, updateWarehouseDto: UpdateWarehouseDto): Promise<Warehouse | null> {
         try {
-            await this.warehousesRepository.update(Number(id), updateWarehouseDto);
-            return await this.findOne(id);
+            await this.warehousesRepository.update(id, updateWarehouseDto);
+            return await this.findOne(id.toString());
         } catch (error) {
             throw new Error(`Error updating warehouse with id ${id}: ${error.message}`);
         }

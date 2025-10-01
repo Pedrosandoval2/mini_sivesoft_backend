@@ -43,7 +43,7 @@ export class WarehousesController {
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Actualizar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén actualizado' })
-    update(@Param('id') id: string, @Body() updateWarehouseDto: UpdateWarehouseDto) {
+    update(@Param('id') id: number, @Body() updateWarehouseDto: UpdateWarehouseDto) {
         return this.warehousesService.update(id, updateWarehouseDto);
     }
 

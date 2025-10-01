@@ -1,4 +1,4 @@
-import { IsString, IsEnum, MinLength, IsNumber } from 'class-validator';
+import { IsString, IsEnum, MinLength, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../entities/user.entity';
 
@@ -17,6 +17,6 @@ export class CreateUserDto {
     role: UserRole;
 
     @ApiProperty({ type: [Number], description: 'Array of warehouse IDs' })
-    @IsNumber()
-    warehouseIds: number[];
+    @IsArray()
+    warehouseIds: [];
 }

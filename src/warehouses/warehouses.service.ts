@@ -25,9 +25,6 @@ export class WarehousesService {
     async findAll(): Promise<Warehouse[]> {
         try {
             const query = this.warehousesRepository.createQueryBuilder('warehouse')
-                .leftJoinAndSelect('warehouse.owner', 'owner');
-
-
             return await query.getMany();
         } catch (error) {
             throw new Error(`Error fetching warehouses: ${error.message}`);
@@ -38,7 +35,7 @@ export class WarehousesService {
         try {
             return await this.warehousesRepository.findOne({
                 where: { id: Number(id) },
-                relations: ['owner', 'inventorySheets'],
+                relations: ['inventorySheets'],
             });
         } catch (error) {
             throw new Error(`Error finding warehouse with id ${id}: ${error.message}`);

@@ -1,5 +1,5 @@
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, OneToMany } from 'typeorm';
 import { InventorySheet } from 'src/inventory-sheets/entities/inventiory-sheet.entity';
 import { User } from 'src/users/entities/user.entity';
 
@@ -20,14 +20,7 @@ export class Warehouse {
     @ManyToMany(() => User, (user) => user.warehouses)
     users: User[];
 
-    @ManyToMany(() => InventorySheet, (sheet) => sheet.warehouses)
-    @JoinTable(
-        {
-            name: 'warehouses_inventory_sheets',
-            joinColumn: { name: 'warehouseId', referencedColumnName: 'id' },
-            inverseJoinColumn: { name: 'inventorySheetId', referencedColumnName: 'id' },
-        }
-    )
+    @OneToMany(() => InventorySheet, (inventorySheet) => inventorySheet.warehouse)
     inventorySheets: InventorySheet[];
 
     @CreateDateColumn()

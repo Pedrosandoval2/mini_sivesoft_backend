@@ -14,4 +14,8 @@ export class CreateWarehouseDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @ApiProperty({ type: () => [Object], description: 'Lista de hojas de inventario asociadas al almacén', required: false })
+    @IsOptional()
+    inventorySheets?: any[];
 }

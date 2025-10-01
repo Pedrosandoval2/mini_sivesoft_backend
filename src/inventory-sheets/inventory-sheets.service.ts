@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { InventorySheetDetail } from './entities/inventory-sheet-detail.entity';
-import { CreateInventorySheetDto } from './dto/create-inventory-sheet.dto';
 import { UpdateInventorySheetDto } from './dto/update-inventory-sheet.dto';
 import { InventorySheet } from './entities/inventiory-sheet.entity';
+import { CreateInventoryDto } from './dto/create-inventory-details';
+import { WarehousesService } from 'src/warehouses/warehouses.service';
 
 interface InventorySheetFilters {
     dateFrom?: string;
     dateTo?: string;
-    warehouseId?: string;
+    warehouseName?: string;
 }
 
 @Injectable()
@@ -19,36 +20,56 @@ export class InventorySheetsService {
         readonly sheetsRepository: Repository<InventorySheet>,
         @InjectRepository(InventorySheetDetail)
         readonly detailsRepository: Repository<InventorySheetDetail>,
+        readonly warehouseService: WarehousesService
     ) { }
 
-    async create(createInventorySheetDto: CreateInventorySheetDto, userId: string): Promise<InventorySheet> {
+    async create(dto: CreateInventoryDto, userId: number) {
+
+        if (!userId) {
+            throw new Error('User ID is required to create an inventory sheet.');
+        }
+
         const sheet = this.sheetsRepository.create({
-            ...createInventorySheetDto,
-            userId: Number(userId),
+            ...dto.sheet,
+            userId,
+            warehouse: { id: dto.sheet.warehouseId },
         });
-        return this.sheetsRepository.save(sheet);
+
+        const savedSheet = await this.sheetsRepository.save(sheet);
+
+        if (dto.details?.length > 0) {
+            const details = dto.details.map(d =>
+                this.detailsRepository.create({
+                    ...d,
+                    inventorySheet: savedSheet,
+                }),
+            );
+
+            await this.detailsRepository.save(details);
+        }
+
+        return this.sheetsRepository.findOne({
+            where: { id: savedSheet.id },
+            relations: ['warehouse', 'details'],
+        });
     }
 
     async findAll(filters: InventorySheetFilters): Promise<InventorySheet[]> {
         const query = this.sheetsRepository.createQueryBuilder('sheet')
             .leftJoinAndSelect('sheet.warehouse', 'warehouse')
-            .leftJoinAndSelect('sheet.user', 'user');
+            .leftJoinAndSelect('sheet.details', 'details');
 
-        if (filters.warehouseId) {
-            query.andWhere('sheet.warehouseId = :warehouseId', { warehouseId: filters.warehouseId });
+
+        if (filters.warehouseName) {
+            query.andWhere('warehouse.name = :warehouseName', { warehouseName: filters.warehouseName });
         }
 
-        if (filters.dateFrom && filters.dateTo) {
-            query.andWhere('sheet.emissionDate BETWEEN :dateFrom AND :dateTo', {
-                dateFrom: new Date(filters.dateFrom),
-                dateTo: new Date(filters.dateTo),
-            });
-        } else if (filters.dateFrom) {
-            query.andWhere('sheet.emissionDate >= :dateFrom', { dateFrom: new Date(filters.dateFrom) });
-        } else if (filters.dateTo) {
-            query.andWhere('sheet.emissionDate <= :dateTo', { dateTo: new Date(filters.dateTo) });
+        if (filters.dateFrom) {
+            query.andWhere('sheet.emissionDate >= :dateFrom', { dateFrom: filters.dateFrom });
         }
-
+        if (filters.dateTo) {
+            query.andWhere('sheet.emissionDate <= :dateTo', { dateTo: filters.dateTo });
+        }
         return query.getMany();
     }
 
@@ -64,18 +85,16 @@ export class InventorySheetsService {
         return this.findOne(id);
     }
 
-    async remove(id: string): Promise<void> {
-        // Primero eliminar los detalles
-        await this.detailsRepository.delete({ inventorySheetId: Number(id) });
-        // Luego eliminar la hoja
+    async remove(id: number): Promise<void> {
+        await this.detailsRepository.delete({ id: Number(id) });
         await this.sheetsRepository.delete(Number(id));
     }
 
-    async addDetail(sheetId: string, detailData: Partial<InventorySheetDetail>): Promise<InventorySheetDetail> {
-        const detail = this.detailsRepository.create({
-            ...detailData,
-            inventorySheetId: Number(sheetId),
-        });
-        return this.detailsRepository.save(detail);
-    }
+    // async addDetail(sheetId: string, detailData: Partial<InventorySheetDetail>): Promise<InventorySheetDetail> {
+    //     const detail = this.detailsRepository.create({
+    //         ...detailData,
+    //         inventorySheetId: Number(sheetId),
+    //     });
+    //     return this.detailsRepository.save(detail);
+    // }
 }

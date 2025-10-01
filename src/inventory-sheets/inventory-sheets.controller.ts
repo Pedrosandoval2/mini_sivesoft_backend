@@ -1,12 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { InventorySheetsService } from './inventory-sheets.service';
-import { CreateInventorySheetDto } from './dto/create-inventory-sheet.dto';
-import { UpdateInventorySheetDto } from './dto/update-inventory-sheet.dto';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/users/entities/user.entity';
+import { CreateInventoryDto } from './dto/create-inventory-details';
 
 @ApiTags('inventory-sheets')
 @ApiBearerAuth()
@@ -19,7 +18,7 @@ export class InventorySheetsController {
     @ApiOperation({ summary: 'Crear nueva hoja de inventario' })
     @ApiResponse({ status: 201, description: 'Hoja de inventario creada exitosamente' })
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    create(@Body() createInventorySheetDto: CreateInventorySheetDto, @Request() req) {
+    create(@Body() createInventorySheetDto: CreateInventoryDto, @Request() req) {
         return this.inventorySheetsService.create(createInventorySheetDto, req.user.userId);
     }
 
@@ -32,9 +31,9 @@ export class InventorySheetsController {
     findAll(
         @Query('dateFrom') dateFrom?: string,
         @Query('dateTo') dateTo?: string,
-        @Query('warehouseId') warehouseId?: string,
+        @Query('warehouseId') warehouseName?: string,
     ) {
-        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseId });
+        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseName });
     }
 
     @Get(':id')
@@ -44,19 +43,19 @@ export class InventorySheetsController {
         return this.inventorySheetsService.findOne(id);
     }
 
-    @Patch(':id')
-    @ApiOperation({ summary: 'Actualizar hoja de inventario' })
-    @ApiResponse({ status: 200, description: 'Hoja de inventario actualizada' })
-    @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    update(@Param('id') id: string, @Body() updateInventorySheetDto: UpdateInventorySheetDto) {
-        return this.inventorySheetsService.update(id, updateInventorySheetDto);
-    }
+    // @Patch(':id')
+    // @ApiOperation({ summary: 'Actualizar hoja de inventario' })
+    // @ApiResponse({ status: 200, description: 'Hoja de inventario actualizada' })
+    // @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    // update(@Param('id') id: string, @Body() updateInventorySheetDto: UpdateInventorySheetDto) {
+    //     return this.inventorySheetsService.update(id, updateInventorySheetDto);
+    // }
 
-    @Delete(':id')
-    @ApiOperation({ summary: 'Eliminar hoja de inventario' })
-    @ApiResponse({ status: 200, description: 'Hoja de inventario eliminada' })
-    @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    remove(@Param('id') id: string) {
-        return this.inventorySheetsService.remove(id);
-    }
+    // @Delete(':id')
+    // @ApiOperation({ summary: 'Eliminar hoja de inventario' })
+    // @ApiResponse({ status: 200, description: 'Hoja de inventario eliminada' })
+    // @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    // remove(@Param('id') id: string) {
+    //     return this.inventorySheetsService.remove(id);
+    // }
 }

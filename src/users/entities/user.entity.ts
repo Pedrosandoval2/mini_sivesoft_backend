@@ -6,6 +6,7 @@ import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
 
 export enum UserRole {
     ADMIN = 'admin',
+    MANAGER = 'manager',
     USER = 'user',
 }
 

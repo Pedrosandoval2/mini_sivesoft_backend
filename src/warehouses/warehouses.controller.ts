@@ -17,7 +17,7 @@ export class WarehousesController {
     constructor(private readonly warehousesService: WarehousesService) { }
 
     @Post()
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Crear nuevo almacén' })
     @ApiResponse({ status: 201, description: 'Almacén creado exitosamente' })
     create(@Body() createWarehouseDto: CreateWarehouseDto) {
@@ -27,6 +27,7 @@ export class WarehousesController {
     @Get()
     @ApiOperation({ summary: 'Obtener almacenes' })
     @ApiResponse({ status: 200, description: 'Lista de almacenes' })
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     findAll() {
         return this.warehousesService.findAll();
     }
@@ -39,6 +40,7 @@ export class WarehousesController {
     }
 
     @Patch(':id')
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Actualizar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén actualizado' })
     update(@Param('id') id: string, @Body() updateWarehouseDto: UpdateWarehouseDto) {
@@ -46,7 +48,7 @@ export class WarehousesController {
     }
 
     @Delete(':id')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Eliminar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén eliminado' })
     remove(@Param('id') id: string) {

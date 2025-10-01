@@ -19,7 +19,7 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Post()
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Crear nuevo usuario' })
     @ApiResponse({ status: 201, description: 'Usuario creado exitosamente' })
     create(@Body() createUserDto: CreateUserDto) {
@@ -27,7 +27,6 @@ export class UsersController {
     }
 
     @Get()
-    @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Obtener todos los usuarios' })
     @ApiResponse({ status: 200, description: 'Lista de usuarios' })
     findAll() {
@@ -35,6 +34,7 @@ export class UsersController {
     }
 
     @Get(':id')
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Obtener usuario por ID' })
     @ApiResponse({ status: 200, description: 'Usuario encontrado' })
     findOne(@Param('id') id: number) {
@@ -42,7 +42,7 @@ export class UsersController {
     }
 
     @Patch(':id')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Actualizar usuario' })
     @ApiResponse({ status: 200, description: 'Usuario actualizado' })
     update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
@@ -50,7 +50,7 @@ export class UsersController {
     }
 
     @Delete(':id')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Eliminar usuario' })
     @ApiResponse({ status: 200, description: 'Usuario eliminado' })
     remove(@Param('id') id: number) {

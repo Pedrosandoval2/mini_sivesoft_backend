@@ -62,7 +62,9 @@ export class UsersService {
 
     async findAll(): Promise<User[]> {
         try {
-            return await this.usersRepository.find();
+            return await this.usersRepository.find({
+                relations: ['warehouses']
+            });
         } catch (error) {
             throw new Error(`Error fetching users: ${error.message}`);
         }
@@ -72,6 +74,7 @@ export class UsersService {
         try {
             return await this.usersRepository.findOne({
                 where: { id },
+                relations: ['warehouses'],
             });
         } catch (error) {
             throw new Error(`Error finding user with id ${id}: ${error.message}`);
@@ -88,32 +91,29 @@ export class UsersService {
         }
     }
 
-    async update(id: number, updateUserDto: UpdateUserDto): Promise<User | null> {
-        try {
+    async update(id: number, updateUserDto: UpdateUserDto) {
+        const user = await this.usersRepository.findOne({
+            where: { id },
+            relations: ['warehouses'],
+        });
 
-            const user = await this.usersRepository.findOne({ where: { id } });
-            if (!user) {
-                throw new Error(`User with id ${id} not found`);
-            }
-
-            if (updateUserDto.warehouseIds) {
-                const warehouses = await this.warehousesRepository.findBy({
-                    id: In(updateUserDto.warehouseIds || [])
-                });
-                user.warehouses = warehouses;
-                delete updateUserDto.warehouseIds;
-            }
-
-            if (updateUserDto.password) {
-                updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
-            }
-            await this.usersRepository.update(id, updateUserDto);
-            return await this.findOne(id);
-        } catch (error) {
-            throw new Error(`Error updating user with id ${id}: ${error.message}`);
+        if (!user) {
+            throw new Error('User not found');
         }
-    }
 
+        if (updateUserDto.warehouseIds) {
+            const warehouses = await this.warehousesRepository.findBy({
+                id: In(updateUserDto.warehouseIds),
+            });
+
+            user.warehouses = warehouses;
+            delete updateUserDto.warehouseIds;
+        }
+
+        const result = this.usersRepository.merge(user, updateUserDto);
+        return this.usersRepository.save(result);
+    }
+    
     async remove(id: number): Promise<void> {
         try {
             await this.usersRepository.delete(id);

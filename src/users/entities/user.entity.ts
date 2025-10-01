@@ -1,7 +1,6 @@
 // src/users/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { InventorySheet } from 'src/inventory-sheets/entities/inventiory-sheet.entity';
 import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
 
 export enum UserRole {
@@ -29,11 +28,15 @@ export class User {
     })
     role: UserRole;
 
-    @OneToMany(() => Warehouse, (warehouse) => warehouse.owner)
+    @ManyToMany(() => Warehouse, (warehouse) => warehouse.users)
+    @JoinTable(
+        {
+            name: 'users_warehouses',
+            joinColumn: { name: 'userId', referencedColumnName: 'id' },
+            inverseJoinColumn: { name: 'warehouseId', referencedColumnName: 'id' },
+        }
+    )
     warehouses: Warehouse[];
-
-    @OneToMany(() => InventorySheet, (sheet) => sheet.user)
-    inventorySheets: InventorySheet[];
 
     @CreateDateColumn()
     createdAt: Date;

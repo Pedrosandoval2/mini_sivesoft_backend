@@ -1,5 +1,5 @@
 
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { InventorySheet } from 'src/inventory-sheets/entities/inventiory-sheet.entity';
 import { User } from 'src/users/entities/user.entity';
 
@@ -14,16 +14,20 @@ export class Warehouse {
     @Column()
     address: string;
 
-    @Column()
-    ownerId: number;
-
     @Column({ default: true })
     isActive: boolean;
 
-    @ManyToOne(() => User, (entity) => entity.warehouses)
-    owner: User;
+    @ManyToMany(() => User, (user) => user.warehouses)
+    users: User[];
 
-    @OneToMany(() => InventorySheet, (sheet) => sheet.warehouse)
+    @ManyToMany(() => InventorySheet, (sheet) => sheet.warehouses)
+    @JoinTable(
+        {
+            name: 'warehouses_inventory_sheets',
+            joinColumn: { name: 'warehouseId', referencedColumnName: 'id' },
+            inverseJoinColumn: { name: 'inventorySheetId', referencedColumnName: 'id' },
+        }
+    )
     inventorySheets: InventorySheet[];
 
     @CreateDateColumn()

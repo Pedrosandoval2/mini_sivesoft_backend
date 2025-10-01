@@ -1,6 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
 import { Warehouse } from '../../warehouses/entities/warehouse.entity';
-import { User } from 'src/users/entities/user.entity';
 import { InventorySheetDetail } from './inventory-sheet-detail.entity';
 
 export enum InventorySheetState {
@@ -35,11 +34,8 @@ export class InventorySheet {
     })
     state: InventorySheetState;
 
-    @ManyToOne(() => Warehouse, (warehouse) => warehouse.inventorySheets)
-    warehouse: Warehouse;
-
-    @ManyToOne(() => User, (user) => user.inventorySheets)
-    user: User;
+    @ManyToMany(() => Warehouse, (warehouse) => warehouse.inventorySheets)
+    warehouses: Warehouse[];
 
     @OneToMany(() => InventorySheetDetail, (detail) => detail.inventorySheet, {
         cascade: true,

@@ -22,9 +22,4 @@ export class CreateEntityDto {
     @IsOptional()
     @IsString()
     phone?: string;
-
-    @ApiProperty({ required: false })
-    @IsOptional()
-    @IsString()
-    mobile?: string;
 }

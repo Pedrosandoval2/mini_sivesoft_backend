@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 
 @Entity('business_entities')
 export class BusinessEntity {
@@ -20,11 +21,12 @@ export class BusinessEntity {
     @Column({ nullable: true })
     phone: string;
 
-    @Column({ nullable: true })
-    mobile: string;
 
     @CreateDateColumn()
     createdAt: Date;
+
+    @OneToOne(() => User, (user) => user.entityRelation, { nullable: true })
+    user: User | null;
 
     @UpdateDateColumn()
     updatedAt: Date;

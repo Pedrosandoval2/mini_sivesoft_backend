@@ -1,7 +1,9 @@
 // src/users/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, OneToMany, OneToOne, JoinColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
+import { InventorySheet } from 'src/inventory-sheets/entities/inventiory-sheet.entity';
+import { BusinessEntity } from 'src/BusinessEntity/entities/businessEntity.entity';
 
 export enum UserRole {
     ADMIN = 'admin',
@@ -21,6 +23,10 @@ export class User {
     @Exclude()
     password: string;
 
+    @OneToOne(() => BusinessEntity,(businessEntity) => businessEntity.user, { nullable: true })
+    @JoinColumn()
+    entityRelation: BusinessEntity;
+
     @Column({
         type: 'enum',
         enum: UserRole,
@@ -37,6 +43,9 @@ export class User {
         }
     )
     warehouses: Warehouse[];
+
+    @OneToMany(() => InventorySheet, (inventorySheet) => inventorySheet.user)
+    inventorySheets: InventorySheet[];
 
     @CreateDateColumn()
     createdAt: Date;

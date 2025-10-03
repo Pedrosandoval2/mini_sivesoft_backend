@@ -7,6 +7,8 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
+import { EntitiesService } from '../BusinessEntity/entities.service';
+import { BusinessEntity } from 'src/BusinessEntity/entities/businessEntity.entity';
 
 
 @Injectable()
@@ -16,22 +18,41 @@ export class UsersService {
         readonly usersRepository: Repository<User>,
         @InjectRepository(Warehouse)
         readonly warehousesRepository: Repository<Warehouse>,
+        readonly EntitiesService: EntitiesService,
     ) { }
 
-    async create(createUserDto: CreateUserDto): Promise<User> {
+    async create(createUserDto: CreateUserDto) {
         try {
+            let entityRelation: BusinessEntity | undefined;
+
+            if (createUserDto.entityRelationId) {
+                const entityRelationResult = await this.EntitiesService.findOne(createUserDto.entityRelationId);
+
+                if (!entityRelationResult) {
+                    throw new Error('EntityRelation not found');
+                }
+
+                if (entityRelationResult.user) {
+                    throw new Error('This entity is already assigned to another user');
+                }
+
+                entityRelation = entityRelationResult;
+            }
 
             const warehouses = await this.warehousesRepository.findBy({
-                id: In(createUserDto.warehouseIds || [])
+                id: In(createUserDto.warehouseIds || []),
             });
 
             const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
             const user = this.usersRepository.create({
                 username: createUserDto.username,
                 role: createUserDto.role,
                 password: hashedPassword,
-                warehouses
+                warehouses,
+                entityRelation,
             });
+
             return await this.usersRepository.save(user);
         } catch (error) {
             throw new Error(`Error creating user: ${error.message}`);
@@ -75,6 +96,7 @@ export class UsersService {
             return await this.usersRepository.findOne({
                 where: { id },
                 relations: ['warehouses'],
+                select: ['id', 'username', 'role']
             });
         } catch (error) {
             throw new Error(`Error finding user with id ${id}: ${error.message}`);
@@ -94,7 +116,7 @@ export class UsersService {
     async update(id: number, updateUserDto: UpdateUserDto) {
         const user = await this.usersRepository.findOne({
             where: { id },
-            relations: ['warehouses'],
+            relations: ['warehouses', 'entityRelation'],
         });
 
         if (!user) {
@@ -105,15 +127,35 @@ export class UsersService {
             const warehouses = await this.warehousesRepository.findBy({
                 id: In(updateUserDto.warehouseIds),
             });
-
             user.warehouses = warehouses;
             delete updateUserDto.warehouseIds;
+        }
+
+        if (updateUserDto.entityRelationId) {
+            const entityRelationResult = await this.EntitiesService.findOne(updateUserDto.entityRelationId);
+
+            if (entityRelationResult) {
+                // Verificar si la entidad ya está asignada a otro user
+                if (entityRelationResult.user && entityRelationResult.user.id !== user.id) {
+                    throw new Error('This entity is already assigned to another user');
+                }
+
+                // Limpiar relación previa si existe
+                if (user.entityRelation && user.entityRelation.id !== entityRelationResult.id) {
+                    user.entityRelation.user = null;
+                }
+
+                user.entityRelation = entityRelationResult;
+            }
+            delete updateUserDto.entityRelationId;
         }
 
         const result = this.usersRepository.merge(user, updateUserDto);
         return this.usersRepository.save(result);
     }
-    
+
+
+
     async remove(id: number): Promise<void> {
         try {
             await this.usersRepository.delete(id);

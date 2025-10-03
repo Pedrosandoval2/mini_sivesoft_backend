@@ -5,11 +5,12 @@ import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { UsersController } from './users.controller';
 import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
+import { EntitiesModule } from 'src/BusinessEntity/entities.module';
 
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([User, Warehouse])],
+    imports: [TypeOrmModule.forFeature([User, Warehouse]), EntitiesModule],
     controllers: [UsersController],
     providers: [UsersService],
     exports: [UsersService],

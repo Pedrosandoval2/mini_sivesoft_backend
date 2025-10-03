@@ -26,14 +26,6 @@ export class UsersController {
         return this.usersService.create(createUserDto);
     }
 
-    @Post(':id/warehouses')
-    @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    @ApiOperation({ summary: 'Agregar almacenes a usuario' })
-    @ApiResponse({ status: 200, description: 'Almacenes agregados exitosamente' })
-    addWarehousesToUser(@Param('id') userId: number, @Body('warehouseIds') warehouseIds: number[]) {
-        return this.usersService.addWarehousesToUser(userId, warehouseIds);
-    }
-
     @Get()
     @ApiOperation({ summary: 'Obtener todos los usuarios' })
     @ApiResponse({ status: 200, description: 'Lista de usuarios' })

@@ -15,6 +15,15 @@ export class EntitiesService {
 
     async create(createEntityDto: CreateEntityDto): Promise<BusinessEntity> {
         try {
+
+            const existingEntity = await this.entitiesRepository.findOne({
+                where: { docNumber: createEntityDto.docNumber, docType: createEntityDto.docType }
+            });
+
+            if (existingEntity) {
+                throw new Error(`Business entity with docNumber ${createEntityDto.docNumber} and docType ${createEntityDto.docType} already exists`);
+            }
+
             const entity = this.entitiesRepository.create(createEntityDto);
             return await this.entitiesRepository.save(entity);
         } catch (error) {
@@ -24,26 +33,24 @@ export class EntitiesService {
 
     async findAll(): Promise<BusinessEntity[]> {
         try {
-            return await this.entitiesRepository.find({
-                relations: ['warehouses'],
-            });
+            return await this.entitiesRepository.find();
         } catch (error) {
             throw new Error(`Error fetching business entities: ${error.message}`);
         }
     }
 
-    async findOne(id: string): Promise<BusinessEntity | null> {
+    async findOne(id: number): Promise<BusinessEntity | null> {
         try {
             return await this.entitiesRepository.findOne({
-                where: { id: Number(id) },
-                relations: ['warehouses'],
+                where: { id },
+                relations: ['user'],
             });
         } catch (error) {
             throw new Error(`Error finding business entity with id ${id}: ${error.message}`);
         }
     }
 
-    async update(id: string, updateEntityDto: UpdateEntityDto): Promise<BusinessEntity | null> {
+    async update(id: number, updateEntityDto: UpdateEntityDto): Promise<BusinessEntity | null> {
         try {
             await this.entitiesRepository.update(id, updateEntityDto);
             return await this.findOne(id);
@@ -52,7 +59,7 @@ export class EntitiesService {
         }
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: number): Promise<void> {
         try {
             await this.entitiesRepository.delete(id);
         } catch (error) {

@@ -30,21 +30,21 @@ export class EntitiesController {
     @Get(':id')
     @ApiOperation({ summary: 'Obtener entidad por ID' })
     @ApiResponse({ status: 200, description: 'Entidad encontrada' })
-    findOne(@Param('id') id: string) {
+    findOne(@Param('id') id: number) {
         return this.entitiesService.findOne(id);
     }
 
     @Patch(':id')
     @ApiOperation({ summary: 'Actualizar entidad' })
     @ApiResponse({ status: 200, description: 'Entidad actualizada' })
-    update(@Param('id') id: string, @Body() updateEntityDto: UpdateEntityDto) {
+    update(@Param('id') id: number, @Body() updateEntityDto: UpdateEntityDto) {
         return this.entitiesService.update(id, updateEntityDto);
     }
 
     @Delete(':id')
     @ApiOperation({ summary: 'Eliminar entidad' })
     @ApiResponse({ status: 200, description: 'Entidad eliminada' })
-    remove(@Param('id') id: string) {
+    remove(@Param('id') id: number) {
         return this.entitiesService.remove(id);
     }
 }

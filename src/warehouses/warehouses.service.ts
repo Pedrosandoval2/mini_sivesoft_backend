@@ -15,27 +15,53 @@ export class WarehousesService {
 
     async create(createWarehouseDto: CreateWarehouseDto): Promise<Warehouse> {
         try {
-            const warehouse = this.warehousesRepository.create(createWarehouseDto);
+
+            const [lastWarehouse] = await this.warehousesRepository.find({
+                order: { serieWarehouse: 'DESC' },
+                take: 1,
+            });
+
+            const nextNumber = (lastWarehouse?.serieWarehouse ?? 0) + 1;
+
+            const warehouse = this.warehousesRepository.create({
+                ...createWarehouseDto,
+                serieWarehouse: nextNumber
+            });
             return await this.warehousesRepository.save(warehouse);
         } catch (error) {
             throw new Error(`Error creating warehouse: ${error.message}`);
         }
     }
 
-    async findAll(): Promise<Warehouse[]> {
+    async findAll(page: number, limit: number, query: string): Promise<{ data: Warehouse[]; total?: number; page?: number; limit?: number; totalPages?: number }> {
         try {
-            const query = this.warehousesRepository.createQueryBuilder('warehouse')
-            return await query.getMany();
+            const qb = this.warehousesRepository.createQueryBuilder('warehouse')
+                .skip((page - 1) * limit)
+                .take(limit);
+
+            if (query) {
+                qb.where('LOWER(warehouse.name) LIKE :query', { query: `%${query.toLowerCase()}%` });
+            }
+
+            const [data, total] = await qb.getManyAndCount();
+            return {
+                data,
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            };
         } catch (error) {
             throw new Error(`Error fetching warehouses: ${error.message}`);
         }
     }
 
-    async findOne(id: string): Promise<Warehouse | null> {
+    async findOne(id: number): Promise<Warehouse | null> {
         try {
             return await this.warehousesRepository.findOne({
-                where: { id: Number(id) },
+                where: { id },
                 relations: ['inventorySheets'],
+                select: ['id', 'name', 'address', 'isActive']
             });
         } catch (error) {
             throw new Error(`Error finding warehouse with id ${id}: ${error.message}`);
@@ -45,7 +71,7 @@ export class WarehousesService {
     async update(id: number, updateWarehouseDto: UpdateWarehouseDto): Promise<Warehouse | null> {
         try {
             await this.warehousesRepository.update(id, updateWarehouseDto);
-            return await this.findOne(id.toString());
+            return await this.findOne(id);
         } catch (error) {
             throw new Error(`Error updating warehouse with id ${id}: ${error.message}`);
         }

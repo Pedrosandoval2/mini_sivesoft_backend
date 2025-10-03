@@ -1,5 +1,5 @@
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, OneToMany, Generated } from 'typeorm';
 import { InventorySheet } from 'src/inventory-sheets/entities/inventiory-sheet.entity';
 import { User } from 'src/users/entities/user.entity';
 
@@ -13,6 +13,9 @@ export class Warehouse {
 
     @Column()
     address: string;
+
+    @Column()
+    serieWarehouse: number;
 
     @Column({ default: true })
     isActive: boolean;

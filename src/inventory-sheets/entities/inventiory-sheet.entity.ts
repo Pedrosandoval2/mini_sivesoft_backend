@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Warehouse } from '../../warehouses/entities/warehouse.entity';
 import { InventorySheetDetail } from './inventory-sheet-detail.entity';
+import { User } from 'src/users/entities/user.entity';
 
 export enum InventorySheetState {
     REGISTERED = 'registered',
@@ -18,11 +19,8 @@ export class InventorySheet {
     @Column()
     serie: string;
 
-    @Column()
-    sheetNumber: string;
-
-    @Column()
-    userId: number;
+    @ManyToOne(() => User, (user) => user.inventorySheets, { eager: true })
+    user: User;
 
     @Column({
         type: 'enum',

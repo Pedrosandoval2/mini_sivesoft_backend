@@ -15,10 +15,6 @@ export class CreateInventorySheetDto {
     @IsString()
     serie: string;
 
-    @ApiProperty()
-    @IsString()
-    sheetNumber: string;
-
     @ApiProperty({ enum: InventorySheetState, required: false })
     @IsOptional()
     @IsEnum(InventorySheetState)

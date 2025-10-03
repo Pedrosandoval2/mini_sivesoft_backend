@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Request, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { InventorySheetsService } from './inventory-sheets.service';
@@ -27,13 +27,15 @@ export class InventorySheetsController {
     @ApiResponse({ status: 200, description: 'Lista de hojas de inventario' })
     @ApiQuery({ name: 'dateFrom', required: false })
     @ApiQuery({ name: 'dateTo', required: false })
-    @ApiQuery({ name: 'warehouseId', required: false })
+    @ApiQuery({ name: 'warehouseName', required: false })
     findAll(
         @Query('dateFrom') dateFrom?: string,
         @Query('dateTo') dateTo?: string,
-        @Query('warehouseId') warehouseName?: string,
+        @Query('warehouseName') warehouseName?: string,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
     ) {
-        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseName });
+        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseName, page, limit });
     }
 
     @Get(':id')
@@ -43,13 +45,13 @@ export class InventorySheetsController {
         return this.inventorySheetsService.findOne(id);
     }
 
-    // @Patch(':id')
-    // @ApiOperation({ summary: 'Actualizar hoja de inventario' })
-    // @ApiResponse({ status: 200, description: 'Hoja de inventario actualizada' })
-    // @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    // update(@Param('id') id: string, @Body() updateInventorySheetDto: UpdateInventorySheetDto) {
-    //     return this.inventorySheetsService.update(id, updateInventorySheetDto);
-    // }
+    @Patch(':id')
+    @ApiOperation({ summary: 'Actualizar hoja de inventario' })
+    @ApiResponse({ status: 200, description: 'Hoja de inventario actualizada' })
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    update(@Param('id') id: number, @Body() updateInventorySheetDto: CreateInventoryDto, @Request() req) {
+        return this.inventorySheetsService.update(id, updateInventorySheetDto, req.user.userId);
+    }
 
     // @Delete(':id')
     // @ApiOperation({ summary: 'Eliminar hoja de inventario' })

@@ -1,6 +1,6 @@
 // src/warehouses/warehouses.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth} from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -32,6 +32,14 @@ export class WarehousesController {
         return this.warehousesService.findAll(page, limit, query);
     }
 
+    @Get('by-user')
+    @ApiOperation({ summary: 'Obtener almacenes por usuario' })
+    @ApiResponse({ status: 200, description: 'Lista de almacenes' })
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    findByUser() {
+        return this.warehousesService.findByUser();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Obtener almacén por ID' })
     @ApiResponse({ status: 200, description: 'Almacén encontrado' })
@@ -51,7 +59,7 @@ export class WarehousesController {
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Eliminar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén eliminado' })
-    remove(@Param('id') id: string) {
+    remove(@Param('id') id: number) {
         return this.warehousesService.remove(id);
     }
 }

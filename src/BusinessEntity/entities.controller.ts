@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { EntitiesService } from './entities.service';
@@ -23,8 +23,8 @@ export class EntitiesController {
     @Get()
     @ApiOperation({ summary: 'Obtener todas las entidades' })
     @ApiResponse({ status: 200, description: 'Lista de entidades' })
-    findAll() {
-        return this.entitiesService.findAll();
+    findAll(@Query('page') page: number, @Query('limit') limit: number, @Query('query') query: string) {
+        return this.entitiesService.findAll({ page, limit, query });
     }
 
     @Get(':id')

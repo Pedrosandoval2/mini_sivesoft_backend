@@ -30,18 +30,21 @@ export class InventorySheetsController {
     @ApiQuery({ name: 'warehouseName', required: false })
     findAll(
         @Query('dateFrom') dateFrom?: string,
+        @Query('query') query?: string,
         @Query('dateTo') dateTo?: string,
-        @Query('warehouseName') warehouseName?: string,
+        @Query('warehouseId') warehouseId?: number,
+        @Query('entity') entity?: number,
+        @Query('state') state?: string,
         @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
+        @Query('limit') limit: number = 10
     ) {
-        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseName, page, limit });
+        return this.inventorySheetsService.findAll({ dateFrom, dateTo, warehouseId, state, page, limit, query, entity });
     }
 
     @Get(':id')
     @ApiOperation({ summary: 'Obtener hoja de inventario por ID' })
     @ApiResponse({ status: 200, description: 'Hoja de inventario encontrada' })
-    findOne(@Param('id') id: string) {
+    findOne(@Param('id') id: number) {
         return this.inventorySheetsService.findOne(id);
     }
 

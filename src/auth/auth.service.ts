@@ -40,6 +40,7 @@ export class AuthService {
                 username: existingUser.username,
                 id: existingUser.id,
                 role: existingUser.role,
+                nameEntity: existingUser.entityRelation?.name || null,
             };
 
             const accessToken = this.jwtService.sign(payload);

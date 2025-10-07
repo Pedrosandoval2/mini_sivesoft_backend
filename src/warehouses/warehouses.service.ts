@@ -1,5 +1,5 @@
 // src/warehouses/warehouses.service.ts
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Warehouse } from './entities/warehouse.entity';
@@ -15,7 +15,6 @@ export class WarehousesService {
 
     async create(createWarehouseDto: CreateWarehouseDto): Promise<Warehouse> {
         try {
-
             const [lastWarehouse] = await this.warehousesRepository.find({
                 order: { serieWarehouse: 'DESC' },
                 take: 1,
@@ -29,7 +28,13 @@ export class WarehousesService {
             });
             return await this.warehousesRepository.save(warehouse);
         } catch (error) {
-            throw new Error(`Error creating warehouse: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al crear el almacén',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
@@ -52,24 +57,66 @@ export class WarehousesService {
                 totalPages: Math.ceil(total / limit),
             };
         } catch (error) {
-            throw new Error(`Error fetching warehouses: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener los almacenes',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    async findByUser() {
+        try {
+            const qb = this.warehousesRepository.createQueryBuilder('warehouse')
+                .leftJoin('warehouse.users', 'user')
+                .where(qb => {
+                    return 'warehouse.id IN ' +
+                        qb.subQuery()
+                            .select('wu.warehouseId')
+                            .from('users_warehouses', 'wu')
+                            .getQuery();
+                })
+
+
+            return await qb.getMany();
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener los almacenes por usuarios',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
     async findOne(id: number): Promise<Warehouse | null> {
         try {
+
+            await this.validateWarehouseExists(id);
+
             return await this.warehousesRepository.findOne({
                 where: { id },
-                relations: ['inventorySheets'],
-                select: ['id', 'name', 'address', 'isActive']
+                relations: ['inventorySheets']
             });
         } catch (error) {
-            throw new Error(`Error finding warehouse with id ${id}: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                `Error finding warehouse with id ${id}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
     async update(id: number, updateWarehouseDto: UpdateWarehouseDto): Promise<Warehouse | null> {
         try {
+
+            await this.validateWarehouseExists(id);
+
             await this.warehousesRepository.update(id, updateWarehouseDto);
             return await this.findOne(id);
         } catch (error) {
@@ -77,9 +124,17 @@ export class WarehousesService {
         }
     }
 
-    async remove(id: string): Promise<void> {
+    private async validateWarehouseExists(id: number): Promise<void> {
+        const warehouse = await this.warehousesRepository.findOne({ where: { id } });
+        if (!warehouse) {
+            throw new HttpException('Almacén no encontrado', HttpStatus.NOT_FOUND);
+        }
+    }
+
+    async remove(id: number): Promise<void> {
         try {
-            await this.warehousesRepository.delete(Number(id));
+            await this.validateWarehouseExists(id);
+            await this.warehousesRepository.delete(id);
         } catch (error) {
             throw new Error(`Error removing warehouse with id ${id}: ${error.message}`);
         }

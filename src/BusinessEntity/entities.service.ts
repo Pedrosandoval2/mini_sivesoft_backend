@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -13,57 +13,140 @@ export class EntitiesService {
         readonly entitiesRepository: Repository<BusinessEntity>,
     ) { }
 
-    async create(createEntityDto: CreateEntityDto): Promise<BusinessEntity> {
+    async create(createEntityDto: CreateEntityDto) {
         try {
-
             const existingEntity = await this.entitiesRepository.findOne({
-                where: { docNumber: createEntityDto.docNumber, docType: createEntityDto.docType }
+                where: { docNumber: createEntityDto.docNumber, docType: createEntityDto.docType },
             });
 
             if (existingEntity) {
-                throw new Error(`Business entity with docNumber ${createEntityDto.docNumber} and docType ${createEntityDto.docType} already exists`);
+                throw new HttpException('El número de documento ya está registrado', HttpStatus.CONFLICT);
             }
 
             const entity = this.entitiesRepository.create(createEntityDto);
             return await this.entitiesRepository.save(entity);
         } catch (error) {
-            throw new Error(`Error creating business entity: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al crear la entidad',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
-    async findAll(): Promise<BusinessEntity[]> {
+    async findAll({ page = 1, limit = 10, query }: { page?: number; limit?: number; query?: string }) {
         try {
-            return await this.entitiesRepository.find();
+            const qb = this.entitiesRepository.createQueryBuilder('entity')
+                .take(limit)
+                .skip((page - 1) * limit);
+
+            if (query) {
+                qb
+                    .where('LOWER(entity.name) LIKE :query', { query: `%${query.toLowerCase()}%` })
+                    .orWhere('LOWER(entity.docNumber) LIKE :query', { query: `%${query.toLowerCase()}%` })
+                    .orWhere('LOWER(entity.phone) LIKE :query', { query: `%${query.toLowerCase()}%` });
+            }
+
+            const [data, total] = await qb.getManyAndCount();
+
+            return {
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            };
         } catch (error) {
-            throw new Error(`Error fetching business entities: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener las entidades',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
     async findOne(id: number): Promise<BusinessEntity | null> {
         try {
-            return await this.entitiesRepository.findOne({
+            const entity = await this.entitiesRepository.findOne({
                 where: { id },
                 relations: ['user'],
             });
+
+            if (!entity) {
+                throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            return entity;
         } catch (error) {
-            throw new Error(`Error finding business entity with id ${id}: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al buscar la entidad',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
     async update(id: number, updateEntityDto: UpdateEntityDto): Promise<BusinessEntity | null> {
         try {
+            const existingEntity = await this.entitiesRepository.findOne({ where: { id } });
+
+            if (!existingEntity) {
+                throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            // Verificar duplicado de documento si se está actualizando
+            if (updateEntityDto.docNumber || updateEntityDto.docType) {
+                const duplicateEntity = await this.entitiesRepository.findOne({
+                    where: {
+                        docNumber: updateEntityDto.docNumber || existingEntity.docNumber,
+                        docType: updateEntityDto.docType || existingEntity.docType
+                    },
+                });
+
+                if (duplicateEntity && duplicateEntity.id !== id) {
+                    throw new HttpException('El número de documento ya está registrado', HttpStatus.CONFLICT);
+                }
+            }
+
             await this.entitiesRepository.update(id, updateEntityDto);
-            return await this.findOne(id);
+            return await this.entitiesRepository.findOne({
+                where: { id },
+                relations: ['user']
+            });
         } catch (error) {
-            throw new Error(`Error updating business entity with id ${id}: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al actualizar la entidad',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
     async remove(id: number): Promise<void> {
         try {
+            const entity = await this.entitiesRepository.findOne({ where: { id } });
+
+            if (!entity) {
+                throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
+            }
+
             await this.entitiesRepository.delete(id);
         } catch (error) {
-            throw new Error(`Error removing business entity with id ${id}: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al eliminar la entidad',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 }

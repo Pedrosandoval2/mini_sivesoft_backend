@@ -9,6 +9,7 @@ export enum UserRole {
     ADMIN = 'admin',
     MANAGER = 'manager',
     USER = 'user',
+    SUPER_ADMIN = 'super_admin', // Super admin puede acceder a todos los tenants
 }
 
 @Entity('users')
@@ -22,6 +23,10 @@ export class User {
     @Column()
     @Exclude()
     password: string;
+
+    // Array de tenantIds a los que pertenece el usuario
+    @Column('simple-array')
+    tenantIds: string[];
 
     @OneToOne(() => BusinessEntity,(businessEntity) => businessEntity.user, { nullable: true })
     @JoinColumn()

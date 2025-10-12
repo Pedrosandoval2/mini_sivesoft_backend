@@ -1,32 +1,33 @@
 // src/warehouses/warehouses.service.ts
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Warehouse } from './entities/warehouse.entity';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
+import { TenantConnectionService } from '../tenant/tenant-connection.service';
 
 @Injectable()
 export class WarehousesService {
     constructor(
-        @InjectRepository(Warehouse)
-        readonly warehousesRepository: Repository<Warehouse>,
+        private readonly tenantConnectionService: TenantConnectionService,
     ) { }
 
-    async create(createWarehouseDto: CreateWarehouseDto): Promise<Warehouse> {
+    async create(createWarehouseDto: CreateWarehouseDto, tenantId: string): Promise<Warehouse> {
         try {
-            const [lastWarehouse] = await this.warehousesRepository.find({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            const [lastWarehouse] = await warehousesRepository.find({
                 order: { serieWarehouse: 'DESC' },
                 take: 1,
             });
 
             const nextNumber = (lastWarehouse?.serieWarehouse ?? 0) + 1;
 
-            const warehouse = this.warehousesRepository.create({
+            const warehouse = warehousesRepository.create({
                 ...createWarehouseDto,
                 serieWarehouse: nextNumber
             });
-            return await this.warehousesRepository.save(warehouse);
+            return await warehousesRepository.save(warehouse);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -38,9 +39,12 @@ export class WarehousesService {
         }
     }
 
-    async findAll(page: number, limit: number, query: string): Promise<{ data: Warehouse[]; total?: number; page?: number; limit?: number; totalPages?: number }> {
+    async findAll(page: number, limit: number, query: string, tenantId: string): Promise<{ data: Warehouse[]; total?: number; page?: number; limit?: number; totalPages?: number }> {
         try {
-            const qb = this.warehousesRepository.createQueryBuilder('warehouse')
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            const qb = warehousesRepository.createQueryBuilder('warehouse')
                 .skip((page - 1) * limit)
                 .take(limit);
 
@@ -67,9 +71,12 @@ export class WarehousesService {
         }
     }
 
-    async findByUser() {
+    async findByUser(tenantId: string) {
         try {
-            const qb = this.warehousesRepository.createQueryBuilder('warehouse')
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            const qb = warehousesRepository.createQueryBuilder('warehouse')
                 .leftJoin('warehouse.users', 'user')
                 .where(qb => {
                     return 'warehouse.id IN ' +
@@ -92,12 +99,14 @@ export class WarehousesService {
         }
     }
 
-    async findOne(id: number): Promise<Warehouse | null> {
+    async findOne(id: number, tenantId: string): Promise<Warehouse | null> {
         try {
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
 
-            await this.validateWarehouseExists(id);
+            await this.validateWarehouseExists(id, tenantId);
 
-            return await this.warehousesRepository.findOne({
+            return await warehousesRepository.findOne({
                 where: { id },
                 relations: ['inventorySheets']
             });
@@ -112,29 +121,37 @@ export class WarehousesService {
         }
     }
 
-    async update(id: number, updateWarehouseDto: UpdateWarehouseDto): Promise<Warehouse | null> {
+    async update(id: number, updateWarehouseDto: UpdateWarehouseDto, tenantId: string): Promise<Warehouse | null> {
         try {
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
 
-            await this.validateWarehouseExists(id);
+            await this.validateWarehouseExists(id, tenantId);
 
-            await this.warehousesRepository.update(id, updateWarehouseDto);
-            return await this.findOne(id);
+            await warehousesRepository.update(id, updateWarehouseDto);
+            return await this.findOne(id, tenantId);
         } catch (error) {
             throw new Error(`Error updating warehouse with id ${id}: ${error.message}`);
         }
     }
 
-    private async validateWarehouseExists(id: number): Promise<void> {
-        const warehouse = await this.warehousesRepository.findOne({ where: { id } });
+    private async validateWarehouseExists(id: number, tenantId: string): Promise<void> {
+        const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+        const warehousesRepository = connection.getRepository(Warehouse);
+        
+        const warehouse = await warehousesRepository.findOne({ where: { id } });
         if (!warehouse) {
             throw new HttpException('Almacén no encontrado', HttpStatus.NOT_FOUND);
         }
     }
 
-    async remove(id: number): Promise<void> {
+    async remove(id: number, tenantId: string): Promise<void> {
         try {
-            await this.validateWarehouseExists(id);
-            await this.warehousesRepository.delete(id);
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            await this.validateWarehouseExists(id, tenantId);
+            await warehousesRepository.delete(id);
         } catch (error) {
             throw new Error(`Error removing warehouse with id ${id}: ${error.message}`);
         }

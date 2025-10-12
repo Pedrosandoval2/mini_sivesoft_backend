@@ -8,6 +8,7 @@ import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import { TenantId } from '../tenant/decorator/tenant-id.decorator';
 
 @ApiTags('warehouses')
 @ApiBearerAuth()
@@ -20,46 +21,46 @@ export class WarehousesController {
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Crear nuevo almacén' })
     @ApiResponse({ status: 201, description: 'Almacén creado exitosamente' })
-    create(@Body() createWarehouseDto: CreateWarehouseDto) {
-        return this.warehousesService.create(createWarehouseDto);
+    create(@Body() createWarehouseDto: CreateWarehouseDto, @TenantId() tenantId: string) {
+        return this.warehousesService.create(createWarehouseDto, tenantId);
     }
 
     @Get()
     @ApiOperation({ summary: 'Obtener almacenes' })
     @ApiResponse({ status: 200, description: 'Lista de almacenes' })
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    findAll(@Query('query') query: string, @Query('page') page = 1, @Query('limit') limit = 10) {
-        return this.warehousesService.findAll(page, limit, query);
+    findAll(@Query('query') query: string, @TenantId() tenantId: string, @Query('page') page = 1, @Query('limit') limit = 10) {
+        return this.warehousesService.findAll(page, limit, query, tenantId);
     }
 
     @Get('by-user')
     @ApiOperation({ summary: 'Obtener almacenes por usuario' })
     @ApiResponse({ status: 200, description: 'Lista de almacenes' })
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    findByUser() {
-        return this.warehousesService.findByUser();
+    findByUser(@TenantId() tenantId: string) {
+        return this.warehousesService.findByUser(tenantId);
     }
 
     @Get(':id')
     @ApiOperation({ summary: 'Obtener almacén por ID' })
     @ApiResponse({ status: 200, description: 'Almacén encontrado' })
-    findOne(@Param('id') id: number) {
-        return this.warehousesService.findOne(id);
+    findOne(@Param('id') id: number, @TenantId() tenantId: string) {
+        return this.warehousesService.findOne(id, tenantId);
     }
 
     @Patch(':id')
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Actualizar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén actualizado' })
-    update(@Param('id') id: number, @Body() updateWarehouseDto: UpdateWarehouseDto) {
-        return this.warehousesService.update(id, updateWarehouseDto);
+    update(@Param('id') id: number, @Body() updateWarehouseDto: UpdateWarehouseDto, @TenantId() tenantId: string) {
+        return this.warehousesService.update(id, updateWarehouseDto, tenantId);
     }
 
     @Delete(':id')
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
     @ApiOperation({ summary: 'Eliminar almacén' })
     @ApiResponse({ status: 200, description: 'Almacén eliminado' })
-    remove(@Param('id') id: number) {
-        return this.warehousesService.remove(id);
+    remove(@Param('id') id: number, @TenantId() tenantId: string) {
+        return this.warehousesService.remove(id, tenantId);
     }
 }

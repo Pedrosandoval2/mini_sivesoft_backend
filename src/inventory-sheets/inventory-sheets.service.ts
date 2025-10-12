@@ -1,11 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { InventorySheetDetail } from './entities/inventory-sheet-detail.entity';
 import { InventorySheet } from './entities/inventiory-sheet.entity';
 import { CreateInventoryDto } from './dto/create-inventory-details';
 import { WarehousesService } from 'src/warehouses/warehouses.service';
 import { UsersService } from 'src/users/users.service';
+import { TenantConnectionService } from '../tenant/tenant-connection.service';
 
 interface InventorySheetFilters {
     dateFrom?: string;
@@ -16,47 +15,48 @@ interface InventorySheetFilters {
     entity?: number;
     page: number;
     limit: number;
+    tenantId: string;
 }
 
 @Injectable()
 export class InventorySheetsService {
     constructor(
-        @InjectRepository(InventorySheet)
-        readonly sheetsRepository: Repository<InventorySheet>,
-        @InjectRepository(InventorySheetDetail)
-        readonly detailsRepository: Repository<InventorySheetDetail>,
+        private readonly tenantConnectionService: TenantConnectionService,
         readonly warehouseService: WarehousesService,
         readonly userService: UsersService
     ) { }
 
-    async create(dto: CreateInventoryDto, userId: number) {
+    async create(dto: CreateInventoryDto, userId: number, tenantId: string) {
+        const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+        const sheetsRepository = connection.getRepository(InventorySheet);
+        const detailsRepository = connection.getRepository(InventorySheetDetail);
 
-        const user = await this.userService.findOne(userId);
+        const user = await this.userService.findOne(userId, tenantId);
 
-        this.validateWarehouseExists(dto.sheet.warehouseId);
+        await this.validateWarehouseExists(dto.sheet.warehouseId, tenantId);
 
         if (userId && !user) {
             throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
         }
 
-        const sheet = this.sheetsRepository.create({
+        const sheet = sheetsRepository.create({
             ...dto.sheet,
             user: user ? { id: user.id } : undefined,
             warehouse: { id: dto.sheet.warehouseId },
         });
 
 
-        const savedSheet = await this.sheetsRepository.save(sheet);
+        const savedSheet = await sheetsRepository.save(sheet);
 
         if (dto.details?.length > 0) {
             const details = dto.details.map(d =>
-                this.detailsRepository.create({
+                detailsRepository.create({
                     ...d,
                     inventorySheet: savedSheet,
                 }),
             );
 
-            await this.detailsRepository.save(details);
+            await detailsRepository.save(details);
         }
 
         return {
@@ -64,15 +64,18 @@ export class InventorySheetsService {
         }
     }
 
-    private async validateWarehouseExists(id: number): Promise<void> {
-        const warehouse = await this.warehouseService.findOne(id);
+    private async validateWarehouseExists(id: number, tenantId: string): Promise<void> {
+        const warehouse = await this.warehouseService.findOne(id, tenantId);
         if (!warehouse) {
             throw new HttpException('Almacén no encontrado', HttpStatus.NOT_FOUND);
         }
     }
 
-    private async validateInventorySheetExists(id: number): Promise<void> {
-        const sheet = await this.sheetsRepository.findOne({ where: { id } });
+    private async validateInventorySheetExists(id: number, tenantId: string): Promise<void> {
+        const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+        const sheetsRepository = connection.getRepository(InventorySheet);
+        
+        const sheet = await sheetsRepository.findOne({ where: { id } });
         if (!sheet) {
             throw new HttpException('Hoja de inventario no encontrada', HttpStatus.NOT_FOUND);
         }
@@ -80,7 +83,10 @@ export class InventorySheetsService {
 
     async findAll(filters: InventorySheetFilters) {
         try {
-            const query = this.sheetsRepository.createQueryBuilder('sheet')
+            const connection = await this.tenantConnectionService.getTenantConnection(filters.tenantId);
+            const sheetsRepository = connection.getRepository(InventorySheet);
+
+            const query = sheetsRepository.createQueryBuilder('sheet')
                 .leftJoin('sheet.warehouse', 'warehouse')
                 .addSelect(['warehouse.id', 'warehouse.name', 'warehouse.address', 'warehouse.isActive', 'warehouse.serieWarehouse'])
                 .leftJoin('sheet.details', 'details')
@@ -120,11 +126,9 @@ export class InventorySheetsService {
             }
 
             if (filters.dateFrom) {
-                console.log('entró');
                 query.andWhere('sheet.emissionDate >= :dateFrom', { dateFrom: filters.dateFrom });
             }
             if (filters.dateTo) {
-                console.log('entró2');
                 query.andWhere('sheet.emissionDate <= :dateTo', { dateTo: filters.dateTo });
             }
 
@@ -152,12 +156,14 @@ export class InventorySheetsService {
         }
     }
 
-    async findOne(id: number): Promise<InventorySheet | null> {
+    async findOne(id: number, tenantId: string): Promise<InventorySheet | null> {
         try {
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const sheetsRepository = connection.getRepository(InventorySheet);
 
-            await this.validateInventorySheetExists(id);
+            await this.validateInventorySheetExists(id, tenantId);
 
-            return this.sheetsRepository.createQueryBuilder('sheet')
+            return sheetsRepository.createQueryBuilder('sheet')
                 .leftJoin('sheet.warehouse', 'warehouse')
                 .addSelect(['warehouse.id', 'warehouse.name', 'warehouse.address', 'warehouse.isActive'])
                 .leftJoin('sheet.details', 'details')
@@ -177,13 +183,17 @@ export class InventorySheetsService {
         }
     }
 
-    async update(id: number, dto: CreateInventoryDto, userId: number) {
+    async update(id: number, dto: CreateInventoryDto, userId: number, tenantId: string) {
         try {
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const sheetsRepository = connection.getRepository(InventorySheet);
+            const detailsRepository = connection.getRepository(InventorySheetDetail);
+
             if (!userId) {
                 throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
             }
 
-            const sheet = await this.sheetsRepository.findOne({
+            const sheet = await sheetsRepository.findOne({
                 where: { id },
                 relations: ['details', 'warehouse'],
             });
@@ -192,7 +202,7 @@ export class InventorySheetsService {
                 throw new HttpException('Hoja de inventario no encontrada', HttpStatus.NOT_FOUND);
             }
 
-            await this.validateWarehouseExists(dto.sheet.warehouseId);
+            await this.validateWarehouseExists(dto.sheet.warehouseId, tenantId);
 
             // Actualizar la hoja
             Object.assign(sheet, {
@@ -201,25 +211,25 @@ export class InventorySheetsService {
                 warehouse: { id: dto.sheet.warehouseId },
             });
 
-            const updatedSheet = await this.sheetsRepository.save(sheet);
+            const updatedSheet = await sheetsRepository.save(sheet);
 
             // Manejo de detalles
             if (dto.details?.length > 0) {
                 // Borrar los detalles anteriores (opcional, depende de tu negocio)
-                await this.detailsRepository.delete({ inventorySheet: { id } });
+                await detailsRepository.delete({ inventorySheet: { id } });
 
                 // Crear los nuevos
                 const details = dto.details.map((d) =>
-                    this.detailsRepository.create({
+                    detailsRepository.create({
                         ...d,
                         inventorySheet: updatedSheet,
                     }),
                 );
 
-                await this.detailsRepository.save(details);
+                await detailsRepository.save(details);
             }
 
-            return this.sheetsRepository.findOne({
+            return sheetsRepository.findOne({
                 where: { id: updatedSheet.id },
                 relations: ['warehouse', 'details'],
             });
@@ -234,10 +244,13 @@ export class InventorySheetsService {
         }
     }
 
-    async remove(id: number): Promise<void> {
+    async remove(id: number, tenantId: string): Promise<void> {
         try {
-            await this.validateInventorySheetExists(id);
-            await this.sheetsRepository.delete(id);
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const sheetsRepository = connection.getRepository(InventorySheet);
+
+            await this.validateInventorySheetExists(id, tenantId);
+            await sheetsRepository.delete(id);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

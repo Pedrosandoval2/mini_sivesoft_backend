@@ -23,7 +23,23 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Mini Sivesoft Backend - Sistema de gestión de inventario multi-tenant con NestJS.
+
+### 🏢 Multi-Tenant Architecture
+
+Este proyecto implementa una arquitectura multi-tenant donde cada empresa tiene su propia base de datos.
+Para una guía completa sobre cómo funciona el sistema multi-tenant, consulta: **[MULTI_TENANT_GUIDE.md](./MULTI_TENANT_GUIDE.md)**
+
+**Características principales:**
+- ✅ 3 empresas independientes (empresa1, empresa2, empresa3)
+- ✅ Usuario admin con acceso a todas las empresas
+- ✅ Autenticación JWT con tenant incluido
+- ✅ Cambio dinámico de empresa sin cambiar de usuario
+- ✅ Gestión de usuarios, almacenes, entidades e inventarios
+
+### 🔐 Credenciales por defecto
+- **Usuario**: `admin`
+- **Contraseña**: `12345`
 
 ## Project setup
 

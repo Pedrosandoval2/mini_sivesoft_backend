@@ -1,21 +1,21 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateEntityDto } from './dto/create-entity.dto';
 import { UpdateEntityDto } from './dto/update-entity.dto';
 import { BusinessEntity } from './entities/businessEntity.entity';
+import { TenantConnectionService } from '../tenant/tenant-connection.service';
 
 @Injectable()
 export class EntitiesService {
     constructor(
-        @InjectRepository(BusinessEntity)
-        readonly entitiesRepository: Repository<BusinessEntity>,
+        private readonly tenantConnectionService: TenantConnectionService,
     ) { }
 
-    async create(createEntityDto: CreateEntityDto) {
+    async create(createEntityDto: CreateEntityDto, tenantId: string) {
         try {
-            const existingEntity = await this.entitiesRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const entitiesRepository = connection.getRepository(BusinessEntity);
+            
+            const existingEntity = await entitiesRepository.findOne({
                 where: { docNumber: createEntityDto.docNumber, docType: createEntityDto.docType },
             });
 
@@ -23,8 +23,8 @@ export class EntitiesService {
                 throw new HttpException('El número de documento ya está registrado', HttpStatus.CONFLICT);
             }
 
-            const entity = this.entitiesRepository.create(createEntityDto);
-            return await this.entitiesRepository.save(entity);
+            const entity = entitiesRepository.create(createEntityDto);
+            return await entitiesRepository.save(entity);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -36,9 +36,12 @@ export class EntitiesService {
         }
     }
 
-    async findAll({ page = 1, limit = 10, query }: { page?: number; limit?: number; query?: string }) {
+    async findAll({ page = 1, limit = 10, query, tenantId }: { page?: number; limit?: number; query?: string; tenantId: string }) {
         try {
-            const qb = this.entitiesRepository.createQueryBuilder('entity')
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const entitiesRepository = connection.getRepository(BusinessEntity);
+            
+            const qb = entitiesRepository.createQueryBuilder('entity')
                 .take(limit)
                 .skip((page - 1) * limit);
 
@@ -69,9 +72,12 @@ export class EntitiesService {
         }
     }
 
-    async findOne(id: number): Promise<BusinessEntity | null> {
+    async findOne(id: number, tenantId: string): Promise<BusinessEntity | null> {
         try {
-            const entity = await this.entitiesRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const entitiesRepository = connection.getRepository(BusinessEntity);
+            
+            const entity = await entitiesRepository.findOne({
                 where: { id },
                 relations: ['user'],
             });
@@ -92,9 +98,12 @@ export class EntitiesService {
         }
     }
 
-    async update(id: number, updateEntityDto: UpdateEntityDto): Promise<BusinessEntity | null> {
+    async update(id: number, updateEntityDto: UpdateEntityDto, tenantId: string): Promise<BusinessEntity | null> {
         try {
-            const existingEntity = await this.entitiesRepository.findOne({ where: { id } });
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const entitiesRepository = connection.getRepository(BusinessEntity);
+            
+            const existingEntity = await entitiesRepository.findOne({ where: { id } });
 
             if (!existingEntity) {
                 throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
@@ -102,7 +111,7 @@ export class EntitiesService {
 
             // Verificar duplicado de documento si se está actualizando
             if (updateEntityDto.docNumber || updateEntityDto.docType) {
-                const duplicateEntity = await this.entitiesRepository.findOne({
+                const duplicateEntity = await entitiesRepository.findOne({
                     where: {
                         docNumber: updateEntityDto.docNumber || existingEntity.docNumber,
                         docType: updateEntityDto.docType || existingEntity.docType
@@ -114,8 +123,8 @@ export class EntitiesService {
                 }
             }
 
-            await this.entitiesRepository.update(id, updateEntityDto);
-            return await this.entitiesRepository.findOne({
+            await entitiesRepository.update(id, updateEntityDto);
+            return await entitiesRepository.findOne({
                 where: { id },
                 relations: ['user']
             });
@@ -130,15 +139,18 @@ export class EntitiesService {
         }
     }
 
-    async remove(id: number): Promise<void> {
+    async remove(id: number, tenantId: string): Promise<void> {
         try {
-            const entity = await this.entitiesRepository.findOne({ where: { id } });
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const entitiesRepository = connection.getRepository(BusinessEntity);
+            
+            const entity = await entitiesRepository.findOne({ where: { id } });
 
             if (!entity) {
                 throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
             }
 
-            await this.entitiesRepository.delete(id);
+            await entitiesRepository.delete(id);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

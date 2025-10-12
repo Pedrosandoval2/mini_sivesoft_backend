@@ -1,7 +1,6 @@
 // src/users/users.service.ts
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,22 +8,23 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
 import { EntitiesService } from '../BusinessEntity/entities.service';
 import { BusinessEntity } from 'src/BusinessEntity/entities/businessEntity.entity';
-
+import { TenantConnectionService } from '../tenant/tenant-connection.service';
 
 @Injectable()
 export class UsersService {
     constructor(
-        @InjectRepository(User)
-        readonly usersRepository: Repository<User>,
-        @InjectRepository(Warehouse)
-        readonly warehousesRepository: Repository<Warehouse>,
+        private readonly tenantConnectionService: TenantConnectionService,
         readonly EntitiesService: EntitiesService,
     ) { }
 
-    async create(createUserDto: CreateUserDto) {
+    async create(createUserDto: CreateUserDto, tenantId: string) {
         try {
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
             // Verificar usuario existente
-            const existingUser = await this.usersRepository.findOne({
+            const existingUser = await usersRepository.findOne({
                 where: { username: createUserDto.username },
             });
 
@@ -35,7 +35,7 @@ export class UsersService {
             let entityRelation: BusinessEntity | undefined;
 
             if (createUserDto.entityRelationId) {
-                const entityRelationResult = await this.EntitiesService.findOne(createUserDto.entityRelationId);
+                const entityRelationResult = await this.EntitiesService.findOne(createUserDto.entityRelationId, tenantId);
 
                 if (!entityRelationResult) {
                     throw new HttpException('Entidad de negocio no encontrada', HttpStatus.NOT_FOUND);
@@ -48,21 +48,22 @@ export class UsersService {
                 entityRelation = entityRelationResult;
             }
 
-            const warehouses = await this.warehousesRepository.findBy({
+            const warehouses = await warehousesRepository.findBy({
                 id: In(createUserDto.warehouseIds || []),
             });
 
             const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-            const user = this.usersRepository.create({
+            const user = usersRepository.create({
                 username: createUserDto.username,
                 role: createUserDto.role,
                 password: hashedPassword,
+                tenantIds: createUserDto.tenantIds,
                 warehouses,
                 entityRelation,
             });
 
-            return await this.usersRepository.save(user);
+            return await usersRepository.save(user);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -74,9 +75,13 @@ export class UsersService {
         }
     }
 
-    async addWarehousesToUser(userId: number, warehouseIds: number[]): Promise<User> {
+    async addWarehousesToUser(userId: number, warehouseIds: number[], tenantId: string): Promise<User> {
         try {
-            const user = await this.usersRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            const user = await usersRepository.findOne({
                 where: { id: userId },
                 relations: ['warehouses'],
             });
@@ -85,7 +90,7 @@ export class UsersService {
                 throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
             }
 
-            const warehouses = await this.warehousesRepository.findBy({
+            const warehouses = await warehousesRepository.findBy({
                 id: In(warehouseIds)
             });
 
@@ -94,7 +99,7 @@ export class UsersService {
             }
 
             user.warehouses.push(...warehouses);
-            return await this.usersRepository.save(user);
+            return await usersRepository.save(user);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -106,9 +111,12 @@ export class UsersService {
         }
     }
 
-    async findAll(): Promise<User[]> {
+    async findAll(tenantId: string): Promise<User[]> {
         try {
-            return await this.usersRepository.find({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+
+            return await usersRepository.find({
                 relations: ['warehouses', 'entityRelation'],
             });
         } catch (error) {
@@ -122,12 +130,15 @@ export class UsersService {
         }
     }
 
-    async findOne(id: number): Promise<User> {
+    async findOne(id: number, tenantId: string): Promise<User> {
         try {
-            const user = await this.usersRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+
+            const user = await usersRepository.findOne({
                 where: { id },
                 relations: ['warehouses', 'entityRelation'],
-                select: ['id', 'username', 'role']
+                select: ['id', 'username', 'role', 'tenantIds', 'warehouses', 'entityRelation'],
             });
 
             if (!user) {
@@ -146,9 +157,12 @@ export class UsersService {
         }
     }
 
-    async findByUsername(username: string): Promise<User | null> {
+    async findByUsername(username: string, tenantId: string): Promise<User | null> {
         try {
-            return await this.usersRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+
+            return await usersRepository.findOne({
                 where: { username },
                 relations: ['entityRelation', 'warehouses'],
             });
@@ -162,9 +176,40 @@ export class UsersService {
         }
     }
 
-    async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    // Método especial para login - busca en todos los tenants
+    async findByUsernameAcrossTenants(username: string): Promise<User | null> {
+        // Lista de todos los tenants configurados
+        const tenantIds = ['empresa1', 'empresa2', 'empresa3'];
+
+        for (const tenantId of tenantIds) {
+            try {
+                const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+                const usersRepository = connection.getRepository(User);
+
+                const user = await usersRepository.findOne({
+                    where: { username },
+                    relations: ['entityRelation', 'warehouses'],
+                });
+
+                if (user) {
+                    return user;
+                }
+            } catch {
+                // Si un tenant falla, continuar con el siguiente
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    async update(id: number, updateUserDto: UpdateUserDto, tenantId: string): Promise<User> {
         try {
-            const user = await this.usersRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+            const warehousesRepository = connection.getRepository(Warehouse);
+
+            const user = await usersRepository.findOne({
                 where: { id },
                 relations: ['warehouses', 'entityRelation'],
             });
@@ -173,13 +218,13 @@ export class UsersService {
                 throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
             }
 
-            await this.ensureUsernameIsUnique(updateUserDto, user);
-            await this.updateWarehousesIfNeeded(updateUserDto, user);
-            await this.updateEntityRelationIfNeeded(updateUserDto, user);
+            await this.ensureUsernameIsUnique(updateUserDto, user, tenantId);
+            await this.updateWarehousesIfNeeded(updateUserDto, user, warehousesRepository);
+            await this.updateEntityRelationIfNeeded(updateUserDto, user, tenantId);
             await this.updatePasswordIfNeeded(updateUserDto);
 
-            const result = this.usersRepository.merge(user, updateUserDto);
-            return await this.usersRepository.save(result);
+            const result = usersRepository.merge(user, updateUserDto);
+            return await usersRepository.save(result);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -191,9 +236,12 @@ export class UsersService {
         }
     }
 
-    private async ensureUsernameIsUnique(updateUserDto: UpdateUserDto, user: User): Promise<void> {
+    private async ensureUsernameIsUnique(updateUserDto: UpdateUserDto, user: User, tenantId: string): Promise<void> {
         if (updateUserDto.username && updateUserDto.username !== user.username) {
-            const duplicateUser = await this.usersRepository.findOne({
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+
+            const duplicateUser = await usersRepository.findOne({
                 where: { username: updateUserDto.username },
             });
 
@@ -203,9 +251,9 @@ export class UsersService {
         }
     }
 
-    private async updateWarehousesIfNeeded(updateUserDto: UpdateUserDto, user: User): Promise<void> {
+    private async updateWarehousesIfNeeded(updateUserDto: UpdateUserDto, user: User, warehousesRepository: any): Promise<void> {
         if (updateUserDto.warehouseIds) {
-            const warehouses = await this.warehousesRepository.findBy({
+            const warehouses = await warehousesRepository.findBy({
                 id: In(updateUserDto.warehouseIds),
             });
             user.warehouses = warehouses;
@@ -213,9 +261,9 @@ export class UsersService {
         }
     }
 
-    private async updateEntityRelationIfNeeded(updateUserDto: UpdateUserDto, user: User): Promise<void> {
+    private async updateEntityRelationIfNeeded(updateUserDto: UpdateUserDto, user: User, tenantId: string): Promise<void> {
         if (updateUserDto.entityRelationId) {
-            const entityRelationResult = await this.EntitiesService.findOne(updateUserDto.entityRelationId);
+            const entityRelationResult = await this.EntitiesService.findOne(updateUserDto.entityRelationId, tenantId);
 
             if (!entityRelationResult) {
                 throw new HttpException('Entidad de negocio no encontrada', HttpStatus.NOT_FOUND);
@@ -242,15 +290,18 @@ export class UsersService {
         }
     }
 
-    async remove(id: number): Promise<void> {
+    async remove(id: number, tenantId: string): Promise<void> {
         try {
-            const user = await this.usersRepository.findOne({ where: { id } });
+            const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
+            const usersRepository = connection.getRepository(User);
+
+            const user = await usersRepository.findOne({ where: { id } });
 
             if (!user) {
                 throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
             }
 
-            await this.usersRepository.delete(id);
+            await usersRepository.delete(id);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

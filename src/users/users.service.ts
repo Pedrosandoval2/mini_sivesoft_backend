@@ -167,8 +167,6 @@ export class UsersService {
                 relations: ['entityRelation', 'warehouses'],
             });
         } catch (error) {
-            // Log the error for debugging purposes
-            console.error('Error in findByUsername:', error);
             throw new HttpException(
                 'Error interno al buscar el usuario',
                 HttpStatus.INTERNAL_SERVER_ERROR,

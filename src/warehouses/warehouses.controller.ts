@@ -1,5 +1,5 @@
 // src/warehouses/warehouses.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { WarehousesService } from './warehouses.service';
@@ -28,7 +28,7 @@ export class WarehousesController {
     @Get()
     @ApiOperation({ summary: 'Obtener almacenes' })
     @ApiResponse({ status: 200, description: 'Lista de almacenes' })
-    @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.USER)
     findAll(@Query('query') query: string, @TenantId() tenantId: string, @Query('page') page = 1, @Query('limit') limit = 10) {
         return this.warehousesService.findAll(page, limit, query, tenantId);
     }
@@ -37,8 +37,8 @@ export class WarehousesController {
     @ApiOperation({ summary: 'Obtener almacenes por usuario' })
     @ApiResponse({ status: 200, description: 'Lista de almacenes' })
     @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    findByUser(@TenantId() tenantId: string) {
-        return this.warehousesService.findByUser(tenantId);
+    findByUser(@TenantId() tenantId: string, @Request() req: any) {
+        return this.warehousesService.findByUser(tenantId, req?.user?.role);
     }
 
     @Get(':id')

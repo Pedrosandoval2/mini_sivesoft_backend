@@ -4,7 +4,7 @@ import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@
  * Decorador personalizado para extraer el tenantId del JWT
  * 
  * Este decorador obtiene automáticamente el tenantId del token JWT del usuario autenticado.
- * No requiere headers adicionales, todo viene del Bearer token.
+ * No requiere headers adicionales, la información se obtiene únicamente del Bearer token.
  * 
  * @example
  * ```typescript

@@ -167,6 +167,9 @@ export class UsersService {
                 relations: ['entityRelation', 'warehouses'],
             });
         } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
             throw new HttpException(
                 'Error interno al buscar el usuario',
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -293,10 +296,27 @@ export class UsersService {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const usersRepository = connection.getRepository(User);
 
-            const user = await usersRepository.findOne({ where: { id } });
+            const user = await usersRepository.findOne({ 
+                where: { id },
+                relations: ['warehouses', 'inventorySheets']
+            });
 
             if (!user) {
                 throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+            }
+
+            if (user.warehouses && user.warehouses.length > 0) {
+                throw new HttpException(
+                    `No se puede eliminar el usuario porque tiene ${user.warehouses.length} almacén(es) asignado(s). Primero desvincúlelo de los almacenes.`,
+                    HttpStatus.CONFLICT,
+                );
+            }
+
+            if (user.inventorySheets && user.inventorySheets.length > 0) {
+                throw new HttpException(
+                    `No se puede eliminar el usuario porque ha creado ${user.inventorySheets.length} hoja(s) de inventario. Las hojas deben ser eliminadas primero o reasignadas.`,
+                    HttpStatus.CONFLICT,
+                );
             }
 
             await usersRepository.delete(id);

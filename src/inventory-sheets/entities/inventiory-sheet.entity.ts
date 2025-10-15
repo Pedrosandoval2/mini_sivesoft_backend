@@ -4,8 +4,9 @@ import { InventorySheetDetail } from './inventory-sheet-detail.entity';
 import { User } from 'src/users/entities/user.entity';
 
 export enum InventorySheetState {
-    REGISTERED = 'registered',
-    FINISHED = 'finished',
+    REGISTERED = 'registrado',
+    APPROVED = 'aprobado',
+    PENDING = 'pendiente',
 }
 
 @Entity('inventory_sheets')

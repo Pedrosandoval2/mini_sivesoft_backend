@@ -144,10 +144,20 @@ export class EntitiesService {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const entitiesRepository = connection.getRepository(BusinessEntity);
             
-            const entity = await entitiesRepository.findOne({ where: { id } });
+            const entity = await entitiesRepository.findOne({ 
+                where: { id },
+                relations: ['warehouses']
+            });
 
             if (!entity) {
                 throw new HttpException('Entidad no encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            if (entity.warehouses && entity.warehouses.length > 0) {
+                throw new HttpException(
+                    `No se puede eliminar la entidad porque tiene ${entity.warehouses.length} almacén(es) asociado(s). Primero elimine o reasigne los almacenes.`,
+                    HttpStatus.CONFLICT,
+                );
             }
 
             await entitiesRepository.delete(id);

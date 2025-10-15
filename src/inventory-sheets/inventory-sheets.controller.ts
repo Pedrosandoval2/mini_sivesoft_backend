@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Request, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Request, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { InventorySheetsService } from './inventory-sheets.service';
@@ -35,16 +35,16 @@ export class InventorySheetsController {
     @ApiQuery({ name: 'page', required: false })
     @ApiQuery({ name: 'limit', required: false })
     findAll(@Query() filters: any, @TenantId() tenantId: string) {
-        return this.inventorySheetsService.findAll({ 
-            dateFrom: filters.dateFrom, 
-            dateTo: filters.dateTo, 
-            warehouseId: filters.warehouseId, 
-            state: filters.state, 
-            page: filters.page || 1, 
-            limit: filters.limit || 10, 
-            query: filters.query, 
+        return this.inventorySheetsService.findAll({
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            warehouseId: filters.warehouseId,
+            state: filters.state,
+            page: filters.page || 1,
+            limit: filters.limit || 10,
+            query: filters.query,
             entity: filters.entity,
-            tenantId 
+            tenantId
         });
     }
 
@@ -63,11 +63,11 @@ export class InventorySheetsController {
         return this.inventorySheetsService.update(id, updateInventorySheetDto, req.user.userId, tenantId);
     }
 
-    // @Delete(':id')
-    // @ApiOperation({ summary: 'Eliminar hoja de inventario' })
-    // @ApiResponse({ status: 200, description: 'Hoja de inventario eliminada' })
-    // @Roles(UserRole.ADMIN, UserRole.MANAGER)
-    // remove(@Param('id') id: string, @TenantId() tenantId: string) {
-    //     return this.inventorySheetsService.remove(id, tenantId);
-    // }
+    @Delete(':id')
+    @ApiOperation({ summary: 'Eliminar hoja de inventario' })
+    @ApiResponse({ status: 200, description: 'Hoja de inventario eliminada' })
+    @Roles(UserRole.ADMIN, UserRole.MANAGER)
+    remove(@Param('id') id: number, @TenantId() tenantId: string) {
+        return this.inventorySheetsService.remove(id, tenantId);
+    }
 }

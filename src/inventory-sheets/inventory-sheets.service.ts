@@ -60,7 +60,10 @@ export class InventorySheetsService {
         }
 
         return {
-            message: 'Hoja de inventario creada exitosamente',
+            ...savedSheet,
+            details: await detailsRepository.find({
+                where: { inventorySheet: { id: savedSheet.id } },
+            }),
         }
     }
 
@@ -248,8 +251,23 @@ export class InventorySheetsService {
         try {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const sheetsRepository = connection.getRepository(InventorySheet);
+            const detailsRepository = connection.getRepository(InventorySheetDetail);
 
             await this.validateInventorySheetExists(id, tenantId);
+            
+            const sheet = await sheetsRepository.findOne({
+                where: { id },
+                relations: ['details']
+            });
+
+            if (!sheet) {
+                throw new HttpException('Hoja de inventario no encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            if (sheet.details && sheet.details.length > 0) {
+                await detailsRepository.delete({ inventorySheet: { id } } as any);
+            }
+
             await sheetsRepository.delete(id);
         } catch (error) {
             if (error instanceof HttpException) {

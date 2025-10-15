@@ -1,5 +1,6 @@
 import { User } from 'src/users/entities/user.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { Warehouse } from 'src/warehouses/entities/warehouse.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany } from 'typeorm';
 
 @Entity('business_entities')
 export class BusinessEntity {
@@ -27,6 +28,9 @@ export class BusinessEntity {
 
     @OneToOne(() => User, (user) => user.entityRelation, { nullable: true })
     user: User | null;
+
+    @OneToMany(() => Warehouse, (warehouse) => warehouse.owner)
+    warehouses: Warehouse[];
 
     @UpdateDateColumn()
     updatedAt: Date;

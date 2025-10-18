@@ -8,20 +8,27 @@ import { WarehousesModule } from './warehouses/warehouses.module';
 import { InventorySheetsModule } from './inventory-sheets/inventory-sheets.module';
 import { EntitiesModule } from './BusinessEntity/entities.module';
 import { TenantModule } from './tenant/tenant.module';
+import { ProductsModule } from './products/products.module';
 
+// Módulo raíz de la aplicación que importa y configura todos los módulos necesarios para la aplicación NestJS
 @Module({
   imports: [
+    // Configuración global de variables de entorno
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TenantModule, // 👈 Agregamos el módulo de tenant
-    UsersModule, 
-    AuthModule, 
-    WarehousesModule, 
-    InventorySheetsModule, 
-    EntitiesModule
+    // Módulos de la aplicación importados
+    TenantModule,
+    UsersModule,
+    AuthModule,
+    WarehousesModule,
+    InventorySheetsModule,
+    EntitiesModule,
+    ProductsModule
   ],
+  // Controladores de la aplicación
   controllers: [AppController],
+  // Proveedores de la aplicación
   providers: [AppService],
 })
 export class AppModule { }

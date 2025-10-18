@@ -9,7 +9,8 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 
-
+//  Estrategias de autenticación
+//  Configuración del módulo de autenticación con JWT y Passport
 @Module({
     imports: [
         UsersModule,

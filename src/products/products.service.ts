@@ -65,7 +65,10 @@ export class ProductsService {
                 .take(limit)
                 .orderBy('product.name', 'ASC');
 
+            console.log("🚀 ~ ProductsService ~ findAll ~ query:", query)
             if (query) {
+                console.log('entrada en el query');
+                
                 qb.where('LOWER(product.name) LIKE :query', { query: `%${query.toLowerCase()}%` })
                     .orWhere('LOWER(product.barcode) LIKE :query', { query: `%${query.toLowerCase()}%` });
             }

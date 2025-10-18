@@ -5,6 +5,7 @@ import { Warehouse } from '../warehouses/entities/warehouse.entity';
 import { BusinessEntity } from '../BusinessEntity/entities/businessEntity.entity';
 import { InventorySheet } from '../inventory-sheets/entities/inventiory-sheet.entity';
 import { InventorySheetDetail } from '../inventory-sheets/entities/inventory-sheet-detail.entity';
+import { Product } from '../products/entities/product.entity';
 
 interface TenantDbConfig {
     database: string;
@@ -14,6 +15,7 @@ interface TenantDbConfig {
 
 @Injectable()
 export class TenantConnectionService implements OnModuleDestroy {
+    // Mapa de conexiones por tenant
     private readonly dataSources = new Map<string, DataSource>();
 
     // Configuración de bases de datos por tenant
@@ -53,7 +55,7 @@ export class TenantConnectionService implements OnModuleDestroy {
         const dataSource = new DataSource({
             type: 'mysql',
             host: process.env.DB_HOST || 'localhost',
-            port: parseInt(process.env.DB_PORT || '3309'),
+            port: Number.parseInt(process.env.DB_PORT || '3309'),
             username: config.username,
             password: config.password,
             database: config.database,
@@ -63,17 +65,21 @@ export class TenantConnectionService implements OnModuleDestroy {
                 BusinessEntity,
                 InventorySheet,
                 InventorySheetDetail,
+                Product,
             ],
             synchronize: true, // Solo en desarrollo - crea las tablas automáticamente
             logging: false, // Desactivado - no mostrar queries SQL en consola
         });
 
+        // Inicializar la conexión
         await dataSource.initialize();
+        // Guardar la conexión en el mapa de conexiones
         this.dataSources.set(tenantId, dataSource);
         
         return dataSource;
     }
 
+    // Obtener repositorio para una entidad específica en un tenant
     getTenantRepository<T>(tenantId: string, entity: any) {
         const dataSource = this.dataSources.get(tenantId);
         if (!dataSource) {
@@ -82,10 +88,12 @@ export class TenantConnectionService implements OnModuleDestroy {
         return dataSource.getRepository(entity);
     }
 
+    // Obtener lista de todos los tenants configurados
     getAllTenants(): string[] {
         return Object.keys(this.tenants);
     }
 
+    // Cerrar conexiones al destruir el módulo
     async onModuleDestroy() {
         // Cerrar todas las conexiones al destruir el módulo
         for (const [, dataSource] of this.dataSources) {

@@ -102,8 +102,10 @@ export class AuthService {
         try {
             // Primero intentamos buscar en el tenant actual, luego en el nuevo tenant
             let user = await this.usersService.findOne(userId, currentTenantId);
+            console.log("🚀 ~ AuthService ~ switchTenant ~ user:", user)
             if (!user) {
                 user = await this.usersService.findOne(userId, tenantId);
+                console.log("🚀 ~ AuthService ~ if:", user)
             }
             
             if (!user) {

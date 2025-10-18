@@ -23,7 +23,6 @@ export class ProductsService {
                 },
             });
 
-            console.log("🚀 ~ ProductsService ~ create ~ existingProductByNameAndUnit:", existingProductByNameAndUnit)
             if (existingProductByNameAndUnit) {
                 throw new HttpException(
                     `Ya existe un producto con el nombre "${createProductDto.name}" y la unidad "${createProductDto.unit}". Debe cambiar el nombre o la unidad.`,
@@ -44,10 +43,8 @@ export class ProductsService {
             }
 
             const product = productsRepository.create(createProductDto);
-            console.log("🚀 ~ ProductsService ~ create ~ product:", product)
             return await productsRepository.save(product);
         } catch (error) {
-            console.log("🚀 ~ ProductsService ~ create ~ error:", error)
             if (error instanceof HttpException) {
                 throw error;
             }
@@ -117,7 +114,6 @@ export class ProductsService {
     }
     
     async findOneBarCode(barcode: string, tenantId: string): Promise<Product> {
-        console.log("🚀 ~ ProductsService ~ findOneBarCode ~ barcode:", barcode)
         try {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const productsRepository = connection.getRepository(Product);

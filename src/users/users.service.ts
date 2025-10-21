@@ -111,14 +111,40 @@ export class UsersService {
         }
     }
 
-    async findAll(tenantId: string): Promise<User[]> {
+    async findAll(query: any, page: number, limit: number, tenantId: string) {
         try {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const usersRepository = connection.getRepository(User);
 
-            return await usersRepository.find({
-                relations: ['warehouses', 'entityRelation'],
-            });
+            const offset = (page - 1) * limit;
+
+            // Construir el query builder
+            const queryBuilder = usersRepository.createQueryBuilder('user')
+                .leftJoinAndSelect('user.warehouses', 'warehouses')
+                .leftJoinAndSelect('user.entityRelation', 'entityRelation')
+                .where('user.role NOT IN (:...excludedRoles)', {
+                    excludedRoles: ['super_admin', 'admin']
+                })
+                .skip(offset)
+                .take(limit);
+
+            // Si hay búsqueda, filtrar por username
+            if (query && query.trim() !== '') {
+                queryBuilder.andWhere('user.username LIKE :query', {
+                    query: `%${query}%`
+                });
+            }
+
+            // Ejecutar query
+            const [users, total] = await queryBuilder.getManyAndCount();
+
+            return {
+                data: users,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            };
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -296,7 +322,7 @@ export class UsersService {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const usersRepository = connection.getRepository(User);
 
-            const user = await usersRepository.findOne({ 
+            const user = await usersRepository.findOne({
                 where: { id },
                 relations: ['warehouses', 'inventorySheets']
             });

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ClassSerializerInterceptor, UseInterceptors, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
@@ -28,8 +28,8 @@ export class UsersController {
     @Get()
     @ApiOperation({ summary: 'Obtener todos los usuarios' })
     @ApiResponse({ status: 200, description: 'Lista de usuarios' })
-    findAll(@TenantId() tenantId: string, req: Request) {
-        return this.usersService.findAll(tenantId);
+    findAll(@TenantId() tenantId: string, @Query('query') query: string, @Query('limit') limit = 10, @Query('page') page = 1) {
+        return this.usersService.findAll(query, page, limit, tenantId);
     }
 
     @Get(':id')

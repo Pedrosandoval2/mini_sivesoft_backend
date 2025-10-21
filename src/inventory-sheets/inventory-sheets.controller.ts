@@ -18,7 +18,6 @@ export class InventorySheetsController {
     @Post()
     @ApiOperation({ summary: 'Crear nueva hoja de inventario' })
     @ApiResponse({ status: 201, description: 'Hoja de inventario creada exitosamente' })
-    @Roles(UserRole.ADMIN, UserRole.MANAGER)
     create(@Body() createInventorySheetDto: CreateInventoryDto, @Request() req, @TenantId() tenantId: string) {
         return this.inventorySheetsService.create(createInventorySheetDto, req.user.userId, tenantId);
     }

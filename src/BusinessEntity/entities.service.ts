@@ -36,20 +36,34 @@ export class EntitiesService {
         }
     }
 
-    async findAll({ page = 1, limit = 10, query, tenantId }: { page?: number; limit?: number; query?: string; tenantId: string }) {
+    async findAll({ page = 1, limit = 10, query, tenantId, onlyUnassigned = false }: { page?: number; limit?: number; query?: string; tenantId: string; onlyUnassigned?: boolean }) {
         try {
             const connection = await this.tenantConnectionService.getTenantConnection(tenantId);
             const entitiesRepository = connection.getRepository(BusinessEntity);
             
             const qb = entitiesRepository.createQueryBuilder('entity')
+                .leftJoin('entity.user', 'user')
                 .take(limit)
                 .skip((page - 1) * limit);
 
-            if (query) {
-                qb
-                    .where('LOWER(entity.name) LIKE :query', { query: `%${query.toLowerCase()}%` })
-                    .orWhere('LOWER(entity.docNumber) LIKE :query', { query: `%${query.toLowerCase()}%` })
-                    .orWhere('LOWER(entity.phone) LIKE :query', { query: `%${query.toLowerCase()}%` });
+            // Si onlyUnassigned es true, filtrar solo entidades sin usuario asignado
+            if (onlyUnassigned) {
+                qb.where('user.id IS NULL');
+            }
+
+            // Si hay búsqueda, filtrar por nombre, documento o teléfono
+            if (query && query.trim() !== '') {
+                if (onlyUnassigned) {
+                    qb.andWhere(
+                        '(LOWER(entity.name) LIKE :query OR LOWER(entity.docNumber) LIKE :query OR LOWER(entity.phone) LIKE :query)',
+                        { query: `%${query.toLowerCase()}%` }
+                    );
+                } else {
+                    qb.where(
+                        '(LOWER(entity.name) LIKE :query OR LOWER(entity.docNumber) LIKE :query OR LOWER(entity.phone) LIKE :query)',
+                        { query: `%${query.toLowerCase()}%` }
+                    );
+                }
             }
 
             const [data, total] = await qb.getManyAndCount();
@@ -71,6 +85,8 @@ export class EntitiesService {
             );
         }
     }
+
+
 
     async findOne(id: number, tenantId: string): Promise<BusinessEntity | null> {
         try {

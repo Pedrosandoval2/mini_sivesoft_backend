@@ -24,8 +24,15 @@ export class EntitiesController {
     @Get()
     @ApiOperation({ summary: 'Obtener todas las entidades' })
     @ApiResponse({ status: 200, description: 'Lista de entidades' })
-    findAll(@Query('page') page: number, @Query('limit') limit: number, @Query('query') query: string, @TenantId() tenantId: string) {
-        return this.entitiesService.findAll({ page, limit, query, tenantId });
+    findAll(
+        @Query('page') page: number, 
+        @Query('limit') limit: number, 
+        @Query('query') query: string, 
+        @Query('onlyUnassigned') onlyUnassigned: string,
+        @TenantId() tenantId: string
+    ) {
+        const unassignedFilter = onlyUnassigned === 'true';
+        return this.entitiesService.findAll({ page, limit, query, tenantId, onlyUnassigned: unassignedFilter });
     }
 
     @Get(':id')

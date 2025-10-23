@@ -594,17 +594,6 @@ Get-Content .\backup.sql | docker exec -i mini_sivesoft_backend mysql -u root -p
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
----
-
-## 📞 Soporte
-
-Si encuentras algún problema o tienes preguntas:
-
-1. 📖 Revisa la [Guía de Instalación](./INSTALLATION_GUIDE.md)
-2. 🔍 Busca en los [Issues](https://github.com/Pedrosandoval2/mini_sivesoft_backend/issues)
-3. 💬 Abre un nuevo Issue describiendo el problema
-
----
 
 ## 📄 Licencia
 

@@ -1,5 +1,4 @@
-// src/auth/auth.service.ts 
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -30,7 +29,13 @@ export class AuthService {
     async login(user: any) {
         const existingUser = await this.usersService.findByUsernameAcrossTenants(user.username);
         if (!existingUser) {
-            throw new Error('User not found');
+            throw new Error('Invalid credentials');
+        }
+
+        const verifyPassword = await bcrypt.compare(user.password, existingUser?.password || '');
+
+        if (!verifyPassword) {
+            throw new Error('Invalid credentials');
         }
 
         // Convertir tenantIds a array si viene como string (de inserts manuales)
@@ -66,7 +71,13 @@ export class AuthService {
                 user: payload
             };
         } catch (error) {
-            throw new Error(`Error during login for user ${user.username}: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener los productos',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
@@ -94,7 +105,13 @@ export class AuthService {
                 token: this.jwtService.sign(newPayload),
             };
         } catch (error) {
-            throw new Error(`Error refreshing token: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener los productos',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
@@ -107,7 +124,7 @@ export class AuthService {
                 user = await this.usersService.findOne(userId, tenantId);
                 console.log("🚀 ~ AuthService ~ if:", user)
             }
-            
+
             if (!user) {
                 throw new Error('Usuario no encontrado');
             }
@@ -140,7 +157,13 @@ export class AuthService {
                 message: `Cambiado a tenant: ${tenantId}`,
             };
         } catch (error) {
-            throw new Error(`Error al cambiar tenant: ${error.message}`);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'Error interno al obtener los productos',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 }

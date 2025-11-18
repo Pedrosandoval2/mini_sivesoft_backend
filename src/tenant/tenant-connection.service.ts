@@ -23,17 +23,17 @@ export class TenantConnectionService implements OnModuleDestroy {
         empresa1: {
             database: 'mini_sivesoft_backend',
             username: 'admin',
-            password: 'Cl@veS3cr3t',
+            password: '@dmin123456*',
         },
         empresa2: {
             database: 'mini_sivesoft_backend_2',
             username: 'admin',
-            password: 'Cl@veS3cr3t',
+            password: '@dmin123456*',
         },
         empresa3: {
             database: 'mini_sivesoft_backend_3',
             username: 'admin',
-            password: 'Cl@veS3cr3t',
+            password: '@dmin123456*',
         },
     };
 

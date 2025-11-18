@@ -22,18 +22,18 @@ export class TenantConnectionService implements OnModuleDestroy {
     private readonly tenants: Record<string, TenantDbConfig> = {
         empresa1: {
             database: 'mini_sivesoft_backend',
-            username: 'root',
-            password: '12345',
+            username: 'admin',
+            password: 'Cl@veS3cr3t',
         },
         empresa2: {
             database: 'mini_sivesoft_backend_2',
-            username: 'root',
-            password: '12345',
+            username: 'admin',
+            password: 'Cl@veS3cr3t',
         },
         empresa3: {
             database: 'mini_sivesoft_backend_3',
-            username: 'root',
-            password: '12345',
+            username: 'admin',
+            password: 'Cl@veS3cr3t',
         },
     };
 
